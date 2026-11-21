@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Larpscord",
+  "version": "1.0.0",
+  "identifier": "com.larpscord.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Larpscord",
+        "label": "main",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 940,
+        "minHeight": 620,
+        "center": true,
+        "resizable": true,
+        "decorations": true,
+        "transparent": false,
+        "backgroundColor": "#08090B"
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": false,
+      "tooltip": "Larpscord"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Russian"],
+        "displayLanguageSelector": false
+      }
+    },
+    "copyright": "© 2026 Larpscord",
+    "category": "Utility",
+    "shortDescription": "Студия настройки Discord Rich Presence",
+    "longDescription": "Larpscord — продвинутый редактор Discord Rich Presence с музыкой, пресетами и профилями."
+  }
+}
