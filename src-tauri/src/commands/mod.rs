@@ -83,6 +83,8 @@ pub async fn save_settings(
     let new_cid = settings.custom_client_id.clone();
     data.settings = settings;
     storage.save(&data).map_err(|e| e.to_string())?;
+    // Фоновой режим применяется сразу.
+    crate::set_run_in_background(data.settings.minimize_to_tray);
 
     if let Some(cid) = new_cid {
         let cid = cid.trim().to_string();
