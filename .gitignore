@@ -1,0 +1,28 @@
+# Node
+node_modules/
+dist/
+*.local
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Сборки и инсталляторы
+*.exe
+*.msi
+*.nsis.zip
+bundle/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# ОС
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Локальные данные
+*.log
+.env
