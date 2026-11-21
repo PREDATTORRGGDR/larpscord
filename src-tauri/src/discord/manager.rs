@@ -83,7 +83,7 @@ impl DiscordManager {
             .lock()
             .take()
             .expect("spawn() вызван повторно");
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             manager.run_loop(app, rx).await;
         });
     }
