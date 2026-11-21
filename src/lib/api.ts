@@ -36,4 +36,5 @@ export const api = {
   musicSetMode: (mode: "off" | "manual" | "auto") => invoke<{ ok: boolean }>("music_set_mode", { mode }),
   musicCover: () => invoke<{ dataUrl: string | null }>("music_cover"),
   musicState: () => invoke<{ mode: string; snapshot: MediaSnapshot | null; cover: string | null }>("music_state"),
+  uploadCover: () => invoke<{ url: string }>("upload_cover"),
 };

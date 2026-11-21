@@ -49,3 +49,20 @@ pub async fn music_state(
         "cover": watcher.cover_data_url(),
     }))
 }
+
+#[tauri::command]
+pub async fn upload_cover(
+    watcher: State<'_, Arc<MusicWatcher>>,
+) -> Result<serde_json::Value, String> {
+    // Берём последний SMTC-снапшот, грузим обложку на хостинг, отдаём URL.
+    let snap = watcher.poll_once().await;
+    let sig = format!("{}|{}", snap.title.clone().unwrap_or_default(), snap.artist.clone().unwrap_or_default());
+    if let Some(bytes) = &snap.thumbnail {
+        match crate::music::cover::cover_url(&sig, bytes).await {
+            Some(url) => Ok(serde_json::json!({ "url": url })),
+            None => Err("хостинги картинок недоступны — обложку не удалось загрузить".into()),
+        }
+    } else {
+        Err("плеер не отдал обложку".into())
+    }
+}

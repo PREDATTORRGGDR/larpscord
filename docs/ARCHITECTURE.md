@@ -26,7 +26,7 @@ Larpscord — настольное приложение (Tauri 2): Rust-бэке
 │  storage/      — JSON-хранилище (%APPDATA%) │
 │  presets/      — встроенные пресеты         │
 │  music/         — SMTC-снапшоты, слежение,  │
-│                  загрузка обложек (catbox)  │
+│                  загрузка обложек (uguu)  │
 │  integrations/ — список процессов Windows   │
 │  commands/     — Tauri-команды для фронтенда│
 └──────────────────────┬──────────────────────┘
@@ -75,8 +75,8 @@ Larpscord — настольное приложение (Tauri 2): Rust-бэке
 в отдельном потоке (WinRT-объекты не Send — используется current_thread runtime
 внутри spawn_blocking). `music/watcher.rs` опрашивает сессию каждые 2 секунды,
 при смене трека/статуса публикует активность «Слушает» с прогрессом
-(start = now − position). Обложка (байты из SMTC) грузится на catbox.moe
-(`music/cover.rs`, кэш 6 ч по подписи трека) — Discord принимает только URL.
+(start = now − position). Обложка (байты из SMTC) грузится на uguu.se, резерв — tmpfiles.org
+(`music/cover.rs`, кэш 2 ч по подписи трека) — Discord принимает только URL.
 Кнопка «Слушать» ведёт на soundcloud.com/search?q=трек.
 
 ## Встроенный Application ID

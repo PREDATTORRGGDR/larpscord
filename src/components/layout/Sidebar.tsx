@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import { useApp, type Page } from "@/stores/app";
 import type { ReactNode } from "react";
+import logoIcon from "@/assets/icon.png";
 
 const NAV: { id: Page; label: string; icon: ReactNode }[] = [
   {
@@ -65,16 +66,8 @@ export function Sidebar() {
       {/* Логотип */}
       <div className="sidebar__brand">
         <div className="sidebar__logo">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="2" y="2" width="16" height="16" rx="4.5" fill="url(#lg)" stroke="rgba(255,255,255,0.14)" />
-            <path d="M7.6 5.6h2.1v7.2h4.1v1.7H7.6V5.6z" fill="#f2f3f5" />
-            <defs>
-              <linearGradient id="lg" x1="2" y1="2" x2="18" y2="18">
-                <stop stop-color="#15161b" />
-                <stop offset="1" stop-color="#0a0b0d" />
-              </linearGradient>
-            </defs>
-          </svg>
+          {/* Та же иконка, что у ярлыка и в трее (v1.2). */}
+          <img src={logoIcon} alt="Larpscord" width={22} height={22} draggable={false} />
         </div>
         <div className="sidebar__title">Larpscord</div>
       </div>

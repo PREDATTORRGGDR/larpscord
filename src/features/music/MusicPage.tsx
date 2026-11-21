@@ -53,18 +53,29 @@ export function MusicPage() {
     }
   };
 
-  const importSnapshot = () => {
+  const importSnapshot = async () => {
     if (!snap?.title) return;
+    setBusy(true);
+    // Обложку для Discord нужно получить как https-URL (бэкенд загрузит
+    // SMTC-картинку на публичный хостинг). data-URL Discord не принимает.
+    let coverUrl: string | null = null;
+    try {
+      const r = await api.uploadCover();
+      coverUrl = r.url;
+    } catch {
+      toast("info", "Обложку загрузить не удалось — активность будет без неё");
+    }
     setDraft({
       ...draft,
       type: "Listening",
       details: snap.title,
       state: snap.artist ?? "",
       large_text: snap.album ?? null,
-      large_image: cover ?? draft.large_image ?? null,
+      large_image: coverUrl,
       timestamps_start: Math.floor(Date.now() / 1000),
       timestamps_end: null,
     });
+    setBusy(false);
   };
 
   const track = draft.details ?? "";
@@ -112,7 +123,7 @@ export function MusicPage() {
                     </div>
                   )}
                 </div>
-                <Button size="sm" variant="subtle" onClick={importSnapshot} disabled={!snap?.title}>
+                <Button size="sm" variant="subtle" onClick={() => void importSnapshot()} disabled={!snap?.title || busy}>
                   В редактор
                 </Button>
               </div>

@@ -159,6 +159,7 @@ pub fn run() {
             commands::music::music_set_mode,
             commands::music::music_cover,
             commands::music::music_state,
+            commands::music::upload_cover,
             commands::presets::save_preset,
             commands::presets::delete_preset,
             commands::presets::list_presets,

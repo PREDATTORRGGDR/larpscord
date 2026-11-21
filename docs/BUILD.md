@@ -30,7 +30,7 @@ npm run tauri build
 Результат:
 
 - Исполняемый файл: `src-tauri/target/release/larpscord.exe`
-- Установщик NSIS: `src-tauri/target/release/bundle/nsis/Larpscord_1.0.0_x64-setup.exe`
+- Установщик NSIS: `src-tauri/target/release/bundle/nsis/Larpscord_1.2.0_x64-setup.exe`
 
 Установщик создаётся в режиме `currentUser` — установка без прав администратора,
 в `%LOCALAPPDATA%`, ярлык на рабочий стол ставит NSIS автоматически.
