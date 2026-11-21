@@ -22,6 +22,9 @@ pub struct AppData {
     /// Активность, которую нужно восстановить при запуске (если включено).
     #[serde(default)]
     pub active_activity: Option<crate::presence::Activity>,
+    /// Пользовательские пресеты.
+    #[serde(default)]
+    pub user_presets: Vec<crate::presets::Preset>,
 }
 
 impl Default for AppData {
@@ -31,6 +34,7 @@ impl Default for AppData {
             settings: Settings::default(),
             last_activity: None,
             active_activity: None,
+            user_presets: Vec::new(),
         }
     }
 }

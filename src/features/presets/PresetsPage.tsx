@@ -1,19 +1,88 @@
-// Пресеты: встроенные шаблоны активностей. (Пользовательские — Этап 2.)
+// Пресеты: встроенные шаблоны + пользовательские (создать/удалить/импорт/экспорт).
 
 import { useApp } from "@/stores/app";
 import { ActivityPreviewCard } from "@/components/discord-preview/ActivityCard";
 import { Badge, Button } from "@/components/ui/primitives";
-import { useEffect } from "react";
+import { api } from "@/lib/api";
+import type { Preset } from "@/types";
+import { useEffect, useState } from "react";
 
 export function PresetsPage() {
-  const presets = useApp((s) => s.presets);
-  const loadPresets = useApp((s) => s.loadPresets);
+  const toast = useApp((s) => s.toast);
   const setDraft = useApp((s) => s.setDraft);
   const setPage = useApp((s) => s.setPage);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const reload = async () => {
+    try {
+      setPresets(await api.listPresets());
+    } catch (e) {
+      toast("error", String(e));
+    }
+  };
 
   useEffect(() => {
-    void loadPresets();
-  }, [loadPresets]);
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const createFromDraft = async () => {
+    const draft = useApp.getState().draft;
+    const name = prompt("Имя нового пресета:", "Мой пресет");
+    if (!name?.trim()) return;
+    setBusy(true);
+    try {
+      await api.savePreset({
+        id: `user-${Date.now()}`,
+        name: name.trim(),
+        category: "Мои пресеты",
+        activity: draft,
+        builtin: false,
+      });
+      await reload();
+      toast("success", `Пресет «${name}» создан`);
+    } catch (e) {
+      toast("error", String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doExport = async () => {
+    try {
+      const json = await api.exportPresets();
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "larpscord-presets.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("success", "Пресеты экспортированы");
+    } catch (e) {
+      toast("error", String(e));
+    }
+  };
+
+  const doImport = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const json = await file.text();
+        const r = await api.importPresets(json);
+        await reload();
+        toast("success", `Импортировано: добавлено ${r.added}, обновлено ${r.updated}`);
+      } catch (e) {
+        toast("error", String(e));
+      }
+    };
+    input.click();
+  };
 
   const grouped = groupBy(presets, (p) => p.category);
 
@@ -22,7 +91,18 @@ export function PresetsPage() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Пресеты</h1>
-          <p className="page-sub">Готовые шаблоны — нажмите, чтобы открыть в редакторе</p>
+          <p className="page-sub">Готовые шаблоны и ваши сохранённые активности</p>
+        </div>
+        <div className="page-head__actions">
+          <Button variant="primary" size="sm" onClick={() => void createFromDraft()} disabled={busy}>
+            Сохранить черновик как пресет
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => void doImport()}>
+            Импорт
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => void doExport()}>
+            Экспорт
+          </Button>
         </div>
       </div>
 
@@ -35,7 +115,7 @@ export function PresetsPage() {
                 <div key={p.id} className="preset-card glass">
                   <div className="preset-card__top">
                     <div className="preset-card__name">{p.name}</div>
-                    {p.builtin ? <Badge tone="muted">встроенный</Badge> : null}
+                    {p.builtin ? <Badge tone="muted">встроенный</Badge> : <Badge tone="ok">мой</Badge>}
                   </div>
                   <div className="dc-card__wrap">
                     <ActivityPreviewCard activity={p.activity} live={false} />
@@ -49,8 +129,26 @@ export function PresetsPage() {
                         setPage("editor");
                       }}
                     >
-                      Открыть в редакторе
+                      Открыть
                     </Button>
+                    {!p.builtin && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={async () => {
+                          if (!confirm(`Удалить пресет «${p.name}»?`)) return;
+                          try {
+                            await api.deletePreset(p.id);
+                            await reload();
+                            toast("success", "Пресет удалён");
+                          } catch (e) {
+                            toast("error", String(e));
+                          }
+                        }}
+                      >
+                        Удалить
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

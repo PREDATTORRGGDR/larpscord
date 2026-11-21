@@ -1,9 +1,12 @@
 //! Tauri-команды: мост между React-фронтендом и Rust-бэкендом.
 //! Все команды async — выполняются на tokio-рантайме Tauri.
 
+pub mod music;
+pub mod presets;
+
 use crate::discord::manager::DiscordManager;
 use crate::presence::Activity;
-use crate::storage::{AppData, Settings, Storage};
+use crate::storage::{Settings, Storage};
 use serde_json::Value;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -117,9 +120,4 @@ pub async fn save_last_activity(
     data.last_activity = Some(activity);
     storage.save(&data).map_err(|e| e.to_string())?;
     Ok(serde_json::json!({ "ok": true }))
-}
-
-#[tauri::command]
-pub async fn get_builtin_presets() -> Result<Value, String> {
-    serde_json::to_value(crate::presets::builtin_presets()).map_err(|e| e.to_string())
 }

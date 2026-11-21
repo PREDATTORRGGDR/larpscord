@@ -1,1 +1,5 @@
-//! Музыкальные интеграции (Этап 2: SMTC/Windows media sessions).
+//! Музыкальные интеграции: SMTC (Windows Media Session) и слежение.
+
+pub mod cover;
+pub mod smtc;
+pub mod watcher;

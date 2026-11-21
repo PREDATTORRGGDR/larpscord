@@ -4,11 +4,13 @@
 pub mod commands;
 pub mod discord;
 pub mod integrations;
+pub mod music;
 pub mod presence;
 pub mod presets;
 pub mod storage;
 
 use discord::manager::DiscordManager;
+use music::watcher::MusicWatcher;
 use std::sync::Arc;
 use storage::Storage;
 use tauri::Manager;
@@ -48,8 +50,13 @@ pub fn run() {
             }
             manager.spawn(app.handle().clone());
 
+            // Слежение за музыкой (SMTC).
+            let watcher = Arc::new(MusicWatcher::new(Arc::clone(&manager)));
+            watcher.spawn(app.handle().clone());
+
             app.manage(storage);
             app.manage(manager);
+            app.manage(watcher);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -61,7 +68,15 @@ pub fn run() {
             commands::get_connection_status,
             commands::reconnect_discord,
             commands::save_last_activity,
-            commands::get_builtin_presets,
+            commands::music::music_poll,
+            commands::music::music_set_mode,
+            commands::music::music_cover,
+            commands::music::music_state,
+            commands::presets::save_preset,
+            commands::presets::delete_preset,
+            commands::presets::list_presets,
+            commands::presets::export_presets,
+            commands::presets::import_presets,
         ])
         .run(tauri::generate_context!())
         .expect("ошибка запуска Larpscord");
