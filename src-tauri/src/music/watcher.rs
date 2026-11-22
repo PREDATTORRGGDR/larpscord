@@ -76,7 +76,10 @@ impl MusicWatcher {
         tauri::async_runtime::spawn(async move {
             let mut tick = tokio::time::interval(Duration::from_secs(2));
             let mut last_signature = String::new();
-            let mut last_push = std::time::Instant::now() - Duration::from_secs(10);
+            let mut last_push: Option<std::time::Instant> = None;
+            // Позиция на момент последней публикации — чтобы ловить seek и паузу.
+            let mut published_pos = 0.0f64;
+            let mut published_playing = false;
             tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 tick.tick().await;
@@ -100,17 +103,39 @@ impl MusicWatcher {
                     snap.duration_secs.map(|d| d as u64).unwrap_or(0),
                 );
                 let now = std::time::Instant::now();
-                if signature != last_signature && now - last_push > Duration::from_secs(3) {
-                    last_signature = signature;
-                    last_push = now;
-                    if let Some(activity) = build_music_activity(&snap, &watcher).await {
-                        let _ = watcher.manager.set_activity(activity).await;
+                let mut republish = signature != last_signature;
+
+                // Позиция в Discord считается от start-timestamp, поэтому
+                // переопубликовываем активность только когда реальная позиция
+                // разошлась с ожидаемой (seek, перемотка, пауза/плей).
+                if !republish {
+                    if let Some(at) = last_push {
+                        if snap.playing != published_playing {
+                            republish = true;
+                        } else if snap.playing {
+                            let expected = published_pos + at.elapsed().as_secs_f64();
+                            let actual = snap.position_secs.unwrap_or(expected);
+                            if (expected - actual).abs() > 2.0 {
+                                republish = true;
+                            }
+                        }
+                        // Страховка от накопленного дрейфа раз в 10 минут.
+                        if at.elapsed() > Duration::from_secs(600) {
+                            republish = true;
+                        }
+                    } else {
+                        republish = true;
                     }
-                } else if now - last_push > Duration::from_secs(240) {
-                    // Раз в 4 минуты обновляем прогресс (start-timestamp пересчитываем).
-                    last_push = now;
-                    if let Some(activity) = build_music_activity(&snap, &watcher).await {
-                        let _ = watcher.manager.set_activity(activity).await;
+                }
+
+                if republish {
+                    last_signature = signature;
+                    if let Some(activity) = build_music_activity(&snap).await {
+                        if watcher.manager.set_activity(activity).await.is_ok() {
+                            last_push = Some(now);
+                            published_pos = snap.position_secs.unwrap_or(0.0);
+                            published_playing = snap.playing;
+                        }
                     }
                 }
             }
@@ -118,7 +143,7 @@ impl MusicWatcher {
     }
 }
 
-async fn build_music_activity(snap: &MediaSnapshot, watcher: &Arc<MusicWatcher>) -> Option<Activity> {
+async fn build_music_activity(snap: &MediaSnapshot) -> Option<Activity> {
     let title = snap.title.clone()?;
     let now = crate::discord::rpc::now_epoch();
 
@@ -136,17 +161,21 @@ async fn build_music_activity(snap: &MediaSnapshot, watcher: &Arc<MusicWatcher>)
         buttons: vec![],
     };
 
-    // Прогресс: start = now - position; end = start + duration.
-    if let Some(pos) = snap.position_secs {
-        let start = now - pos as i64;
-        act.timestamps_start = Some(start);
-        if let Some(dur) = snap.duration_secs {
-            if dur > pos {
-                act.timestamps_end = Some(start + dur as i64);
+    // Прогресс: start = now - позиция, end = start + длительность.
+    // На паузе таймеры не ставим: Discord всегда «тикает» от start, заморозить
+    // прогресс протоколом нельзя — честнее показать трек без времени.
+    if snap.playing {
+        if let Some(pos) = snap.position_secs {
+            let start = now - pos.round() as i64;
+            act.timestamps_start = Some(start);
+            if let Some(dur) = snap.duration_secs {
+                if dur > pos {
+                    act.timestamps_end = Some(start + dur.round() as i64);
+                }
             }
+        } else {
+            act.timestamps_start = Some(now);
         }
-    } else if snap.playing {
-        act.timestamps_start = Some(now);
     }
 
     // Обложка: байты SMTC → публичный URL (catbox.moe, кэш по треку).
@@ -173,7 +202,6 @@ async fn build_music_activity(snap: &MediaSnapshot, watcher: &Arc<MusicWatcher>)
             });
         }
     }
-    let _ = watcher;
     Some(act)
 }
 

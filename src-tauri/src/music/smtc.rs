@@ -29,15 +29,36 @@ pub mod win {
     use super::MediaSnapshot;
     use windows::core::HSTRING;
     use windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager as SessionManager;
+    use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus;
     use windows::Storage::Streams::DataReader;
 
     /// Собирает снимок текущей медиа-сессии.
     /// Блокирующая: вызывать через `tauri::async_runtime::spawn_blocking`.
     pub async fn snapshot() -> windows::core::Result<MediaSnapshot> {
         let manager = SessionManager::RequestAsync()?.await?;
-        let session = match manager.GetCurrentSession() {
-            Ok(s) => s,
-            Err(_) => return Ok(MediaSnapshot::default()),
+
+        // Берём сессию, которая реально играет: GetCurrentSession может указать
+        // на свёрнутый/приостановленный плеер, пока музыка идёт в другом.
+        let mut session = None;
+        if let Ok(list) = manager.GetSessions() {
+            for i in 0..list.Size().unwrap_or(0) {
+                if let Ok(s) = list.GetAt(i) {
+                    let playing = s
+                        .GetPlaybackInfo()
+                        .ok()
+                        .and_then(|pi| pi.PlaybackStatus().ok())
+                        .map(|st| st == PlaybackStatus::Playing)
+                        .unwrap_or(false);
+                    if playing {
+                        session = Some(s);
+                        break;
+                    }
+                }
+            }
+        }
+        let session = match session.or_else(|| manager.GetCurrentSession().ok()) {
+            Some(s) => s,
+            None => return Ok(MediaSnapshot::default()),
         };
         // Пустая сессия (нет активного плеера): SourceAppUserModelId падает.
         if session.SourceAppUserModelId().is_err() {
@@ -64,14 +85,7 @@ pub mod win {
         let (position_secs, duration_secs) = session
             .GetTimelineProperties()
             .ok()
-            .map(|tl| {
-                let pos = tl.Position().map(|d| d.Duration as f64 / 10_000_000.0).unwrap_or(0.0);
-                let end = tl.EndTime().map(|d| d.Duration as f64 / 10_000_000.0).unwrap_or(0.0);
-                (
-                    if pos > 0.0 { Some(pos) } else { None },
-                    if end > 0.0 { Some(end) } else { None },
-                )
-            })
+            .map(|tl| timeline(&tl, playing))
             .unwrap_or((None, None));
 
         Ok(MediaSnapshot {
@@ -85,6 +99,56 @@ pub mod win {
             position_secs,
             duration_secs,
         })
+    }
+
+    /// Позиция/длительность трека с поправкой на «возраст» снимка таймлайна.
+    ///
+    /// SMTC отдаёт `Position` на момент `LastUpdatedTime`, а не «сейчас»:
+    /// плееры обновляют таймлайн только при seek/pause/смене трека. Пока
+    /// играет — добавляем прошедшее с этого момента время, иначе позиция
+    /// «замирает» и Discord показывает случайные секунды.
+    fn timeline(
+        tl: &windows::Media::Control::GlobalSystemMediaTransportControlsSessionTimelineProperties,
+        playing: bool,
+    ) -> (Option<f64>, Option<f64>) {
+        let secs = |d: windows::Foundation::TimeSpan| d.Duration as f64 / 10_000_000.0;
+        let start = tl.StartTime().map(secs).unwrap_or(0.0);
+        let end = tl.EndTime().map(secs).unwrap_or(0.0);
+        let mut pos = tl.Position().map(secs).unwrap_or(0.0) - start;
+
+        if playing {
+            if let Ok(updated) = tl.LastUpdatedTime() {
+                if let Some(dt) = seconds_since(updated) {
+                    // Разумный коридор: игнорируем мусорные/древние метки.
+                    if (0.0..7200.0).contains(&dt) {
+                        pos += dt;
+                    }
+                }
+            }
+        }
+
+        let duration = end - start;
+        if duration > 0.0 {
+            pos = pos.clamp(0.0, duration);
+            (Some(pos.max(0.0)), Some(duration))
+        } else {
+            (if pos > 0.0 { Some(pos) } else { None }, None)
+        }
+    }
+
+    /// Секунды с момента WinRT `DateTime` (100-нс тики с 1601 года).
+    fn seconds_since(when: windows::Foundation::DateTime) -> Option<f64> {
+        const EPOCH_DIFF_100NS: i64 = 116_444_736_000_000_000;
+        if when.UniversalTime <= EPOCH_DIFF_100NS {
+            return None;
+        }
+        let then_ns = (when.UniversalTime - EPOCH_DIFF_100NS) as f64 * 100.0;
+        let now_ns = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .ok()?
+            .as_nanos() as f64;
+        let delta = (now_ns - then_ns) / 1e9;
+        delta.is_finite().then_some(delta)
     }
 
     async fn read_thumbnail(

@@ -1,6 +1,6 @@
 [package]
 name = "larpscord"
-version = "1.2.0"
+version = "1.2.1"
 description = "Larpscord — студия настройки Discord Rich Presence"
 authors = ["Larpscord"]
 license = "MIT"

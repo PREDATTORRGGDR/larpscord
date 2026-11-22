@@ -33,7 +33,7 @@
 
 ## Установка (Windows 10/11)
 
-1. Запустите `Larpscord_1.2.0_x64-setup.exe` из
+1. Запустите `Larpscord_1.2.1_x64-setup.exe` из
    [релизов](https://github.com/PREDATTORRGGDR/larpscord/releases) (или соберите сами — см. ниже).
 2. Установщик потребует права только текущего пользователя — без UAC.
 3. На рабочем столе появится ярлык **Larpscord**.
@@ -68,7 +68,7 @@ RPC-канал, который Discord предоставляет сам.
 ```bash
 npm install
 npm run tauri build
-# → src-tauri/target/release/bundle/nsis/Larpscord_1.2.0_x64-setup.exe
+# → src-tauri/target/release/bundle/nsis/Larpscord_1.2.1_x64-setup.exe
 ```
 
 ## Архитектура

@@ -5,7 +5,6 @@
 use super::ipc::{DiscordFlavor, IpcError};
 use super::rpc::{ConnectionState, RpcClient, UserInfo};
 use crate::presence::Activity;
-use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};

@@ -6,7 +6,7 @@ use crate::presence::Activity;
 use serde_json::{json, Value};
 use std::time::Duration;
 use tokio::sync::Mutex;
-use tokio::time::{sleep, timeout};
+use tokio::time::sleep;
 
 /// Пользователь Discord из ответа READY.
 #[derive(Debug, Clone, serde::Serialize)]
