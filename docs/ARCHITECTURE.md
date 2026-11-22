@@ -74,8 +74,10 @@ Larpscord — настольное приложение (Tauri 2): Rust-бэке
 `music/smtc.rs` читает Windows Media Session (GlobalSystemMediaTransportControls)
 в отдельном потоке (WinRT-объекты не Send — используется current_thread runtime
 внутри spawn_blocking). `music/watcher.rs` опрашивает сессию каждые 2 секунды,
-при смене трека/статуса публикует активность «Слушает» с прогрессом
-(start = now − position). Обложка (байты из SMTC) грузится на uguu.se, резерв — tmpfiles.org
+предпочитает реально играющую сессию; позиция считается как
+`Position + (now − LastUpdatedTime)` (SMTC отдаёт снимок таймлайна, а не «сейчас»).
+Активность «Слушает» переопубликовывается при смене трека, перемотке
+(дрейф > 2 с) и play/pause; на паузе таймеры не отправляются. Обложка (байты из SMTC) грузится на uguu.se, резерв — tmpfiles.org
 (`music/cover.rs`, кэш 2 ч по подписи трека) — Discord принимает только URL.
 Кнопка «Слушать» ведёт на soundcloud.com/search?q=трек.
 
